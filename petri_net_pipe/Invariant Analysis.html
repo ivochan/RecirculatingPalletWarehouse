@@ -1,0 +1,402 @@
+<html><head><style type="text/css">body{font-family:Arial,Helvetica,sans-serif;text-align:center;background:#ffffff}td.colhead{font-weight:bold;text-align:center;background:#ffffff}td.rowhead{font-weight:bold;background:#ffffff}td.cell{text-align:center;padding:5px,0}tr.even{background:#a0a0d0}tr.odd{background:#c0c0f0}td.empty{background:#ffffff}</style><html>
+  <head>
+    <style type="text/css">
+      <!--
+        body { font-family: Arial,Helvetica,sans-serif; text-align: center; background-color: #ffffff; background-repeat: repeat; background-attachment: scroll }
+        td.colhead { font-weight: bold; text-align: center; background-color: #ffffff; background-repeat: repeat; background-attachment: scroll }
+        td.rowhead { font-weight: bold; background-color: #ffffff; background-repeat: repeat; background-attachment: scroll }
+        td.cell { text-align: center; padding-top: 0; padding-right: 0; padding-bottom: 0; padding-left: 0 }
+        tr.even { background-color: #a0a0d0; background-repeat: repeat; background-attachment: scroll }
+        tr.odd { background-color: #c0c0f0; background-repeat: repeat; background-attachment: scroll }
+        td.empty { background-color: #ffffff; background-repeat: repeat; background-attachment: scroll }
+      -->
+    </style>
+    
+  </head>
+  <body>
+    <h2>
+      Petri net invariant analysis results
+    </h2>
+    <h3>
+      T-Invariants
+    </h3>
+    <table border="0" cellspacing="2">
+      <tr class="odd">
+        <td class="colhead">
+          T0: agv scarica in A
+        </td>
+        <td class="colhead">
+          T1: va in B
+        </td>
+        <td class="colhead">
+          T10: invio richiesta di A
+        </td>
+        <td class="colhead">
+          T11: invio richiesta di B
+        </td>
+        <td class="colhead">
+          T2: va in I
+        </td>
+        <td class="colhead">
+          T3: carica pezzi
+        </td>
+        <td class="colhead">
+          T4: va in A
+        </td>
+        <td class="colhead">
+          T5: nessun pezzo
+        </td>
+        <td class="colhead">
+          T6: va in B
+        </td>
+        <td class="colhead">
+          T7: scarica in B
+        </td>
+        <td class="colhead">
+          T8: va in I
+        </td>
+        <td class="colhead">
+          T9: rifornimento pezzi
+        </td>
+      </tr>
+      <tr class="even">
+        <td class="cell">
+          1
+        </td>
+        <td class="cell">
+          1
+        </td>
+        <td class="cell">
+          1
+        </td>
+        <td class="cell">
+          1
+        </td>
+        <td class="cell">
+          2
+        </td>
+        <td class="cell">
+          2
+        </td>
+        <td class="cell">
+          2
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          1
+        </td>
+        <td class="cell">
+          1
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          2
+        </td>
+      </tr>
+      <tr class="odd">
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          1
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          0
+        </td>
+      </tr>
+      <tr class="even">
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          1
+        </td>
+        <td class="cell">
+          1
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          1
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          1
+        </td>
+        <td class="cell">
+          1
+        </td>
+      </tr>
+    </table>
+    The net is covered by positive T-Invariants, therefore it might be bounded 
+    and live.<br><br>
+
+    <h3>
+      P-Invariants
+    </h3>
+    <table border="0" cellspacing="2">
+      <tr class="odd">
+        <td class="colhead">
+          P0: richiesta pezzi in B
+        </td>
+        <td class="colhead">
+          P1: agv carico in A
+        </td>
+        <td class="colhead">
+          P10: attesa B
+        </td>
+        <td class="colhead">
+          P10: attesa B
+        </td>
+        <td class="colhead">
+          P2: richiesta pezzi in A
+        </td>
+        <td class="colhead">
+          P3: agv vuoto in A
+        </td>
+        <td class="colhead">
+          P4: agv vuoto in B
+        </td>
+        <td class="colhead">
+          P5: agv vuoto in I
+        </td>
+        <td class="colhead">
+          P6: pezzi in I
+        </td>
+        <td class="colhead">
+          P7: agv carico in I
+        </td>
+        <td class="colhead">
+          P8: agv carico in B
+        </td>
+        <td class="colhead">
+          P9: attesa A
+        </td>
+        <td class="colhead">
+          P9: attesa A
+        </td>
+      </tr>
+      <tr class="even">
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          1
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          0
+        </td>
+      </tr>
+      <tr class="odd">
+        <td class="cell">
+          1
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          1
+        </td>
+        <td class="cell">
+          1
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          1
+        </td>
+      </tr>
+      <tr class="even">
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          1
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          1
+        </td>
+        <td class="cell">
+          1
+        </td>
+        <td class="cell">
+          1
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          1
+        </td>
+        <td class="cell">
+          1
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          0
+        </td>
+      </tr>
+      <tr class="odd">
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          0
+        </td>
+        <td class="cell">
+          1
+        </td>
+        <td class="cell">
+          0
+        </td>
+      </tr>
+    </table>
+    The net is not covered by positive P-Invariants, therefore we do not know 
+    if it is bounded.<br>
+
+    <h3>
+      P-Invariant equations
+    </h3>
+    M(P10: attesa B) = 1<br>M(P0: richiesta pezzi in B) + M(P10: attesa B) + 
+    M(P2: richiesta pezzi in A) + M(P9: attesa A) = 2<br>M(P1: agv carico in 
+    A) + M(P3: agv vuoto in A) + M(P4: agv vuoto in B) + M(P5: agv vuoto in I) 
+    + M(P7: agv carico in I) + M(P8: agv carico in B) = 1<br>M(P9: attesa A) = 
+    1<br><br><br>Analysis time: 0.005s
+  </body>
+</html>
