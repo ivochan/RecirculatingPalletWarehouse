@@ -1,0 +1,862 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE nta PUBLIC '-//Uppaal Team//DTD Flat System 1.1//EN' 'http://www.it.uu.se/research/group/darts/uppaal/flat-1_2.dtd'>
+<nta>
+	<declaration>//Insert declarations of global clocks, variables, constants and channels.
+
+//global consts
+const int T = 12;
+const int P = 11;
+const int PRE = 2;
+const int POST = 2;
+//numero di CPU
+//const int CPU = 0;
+const int CPU = 1;
+const int TASK = 1;
+//const int TT = 0;
+//tt guardia sempre vera, come valore di clock x&gt;=0 
+const int TT = 1;
+const int INF = -1;
+const int NONE=-1;
+
+//places
+const int agv_carico_A = 0;
+const int richiesta_pezzi_B = 1;
+const int richiesta_pezzi_A = 2;
+const int attesa_B = 3;
+const int attesa_A = 4;
+const int agv_vuoto_A = 5;
+const int agv_vuoto_B = 6;
+const int agv_vuoto_I = 7;
+const int agv_carico_I = 8;
+const int caricamento_agv = 9;
+const int agv_carico_B = 10;
+
+
+//Transitions
+const int invio_richiesta_B = 0; //Event
+const int invio_richiesta_A = 1; //Event
+const int va_in_B = 2; //Event
+const int scarica_A = 3; //Event
+const int agv_va_in_B = 4; //Event
+const int agv_va_in_I = 5; //Event
+const int agv_va_in_A = 6; //Event
+const int carica_pezzi = 7; //Event
+const int nessun_pezzo = 8; //Event
+const int rifornimento_pezzi = 9; //Event
+const int scarica_B = 10; //Event
+const int va_in_I = 11; //Event
+
+//P-Transitions
+
+
+//TASKs
+const int dummy_task=0;
+
+//CPUs
+
+
+//channels
+broadcast chan end_fire;
+
+
+//clocks
+clock t[TASK];
+clock x[TASK];
+
+
+//Useful types
+typedef int[0,T-1] tid;
+typedef int[0, TASK-1] task_t;
+typedef int[0, CPU-1] cpu_t;
+
+
+//structures
+typedef struct{
+	int[0,T] index;
+	int[0,1] ready;
+} R_Info;
+
+typedef struct{
+	int[0,T] index;
+	int[0,T] prior;
+} P_Info;
+
+typedef struct{
+  int index;
+  int weight;
+} Info;
+
+
+//FPS data:
+P_Info fixed_priority[CPU][TASK][TT];
+
+//EDF data:
+const int deadline[TASK]={0};
+
+//Requests data:
+R_Info request[CPU][TASK][TT];
+
+
+//Backward incidence matrix:
+const Info B[T][PRE] = {
+{{attesa_A,1},{richiesta_pezzi_B,0}}, // invio_richiesta_B
+{{attesa_B,1},{richiesta_pezzi_A,0}}, // invio_richiesta_A
+{{agv_carico_A,1},{richiesta_pezzi_A,0}}, // va_in_B
+{{agv_carico_A,1},{richiesta_pezzi_A,1}}, // scarica_A
+{{agv_vuoto_A,1},{NONE,0}}, // agv_va_in_B
+{{agv_vuoto_B,1},{NONE,0}}, // agv_va_in_I
+{{agv_carico_I,1},{NONE,0}}, // agv_va_in_A
+{{agv_vuoto_I,1},{caricamento_agv,1}}, // carica_pezzi
+{{agv_vuoto_I,1},{caricamento_agv,0}}, // nessun_pezzo
+{{caricamento_agv,0},{NONE,0}}, // rifornimento_pezzi
+{{agv_carico_B,1},{richiesta_pezzi_B,1}}, // scarica_B
+{{agv_carico_B,1},{richiesta_pezzi_B,0}} // va_in_I
+};
+
+
+//Forward incidence matrix:
+const Info F[T][POST]= {
+{{richiesta_pezzi_B,1},{NONE,0}}, // invio_richiesta_B
+{{richiesta_pezzi_A,1},{NONE,0}}, // invio_richiesta_A
+{{agv_carico_B,1},{NONE,0}}, // va_in_B
+{{agv_vuoto_A,1},{attesa_A,1}}, // scarica_A
+{{agv_vuoto_B,1},{NONE,0}}, // agv_va_in_B
+{{agv_vuoto_I,1},{NONE,0}}, // agv_va_in_I
+{{agv_carico_A,1},{NONE,0}}, // agv_va_in_A
+{{agv_carico_I,1},{NONE,0}}, // carica_pezzi
+{{agv_vuoto_I,1},{NONE,0}}, // nessun_pezzo
+{{caricamento_agv,1},{NONE,0}}, // rifornimento_pezzi
+{{agv_vuoto_B,1},{attesa_B,1}}, // scarica_B
+{{agv_vuoto_I,1},{NONE,0}} // va_in_I
+};
+
+
+//Fire window vector:
+const int I[T][2] = {
+{0,1}, // invio_richiesta_B
+{0,1}, // invio_richiesta_A
+{0,1}, // va_in_B
+{0,1}, // scarica_A
+{0,1}, // agv_va_in_B
+{0,1}, // agv_va_in_I
+{0,1}, // agv_va_in_A
+{0,1}, // carica_pezzi
+{0,1}, // nessun_pezzo
+{0,1}, // rifornimento_pezzi
+{0,1}, // scarica_B
+{0,1} // va_in_I
+};
+
+
+//Mark vector:
+int[0,1] M[P]={ 0,0,0,1,1,0,0,1,0,0,0 };
+
+
+//NEXT ON CPU
+//initial value to zero
+int[NONE, T-1] nxt[CPU]={0};
+int[NONE, T-1] busy[CPU]={0};
+
+//GLOBAL FUNCTIONS
+void reset(){
+   int c;
+   for( c=0; c&lt;CPU; ++c ) nxt[c]=NONE;
+}//reset
+
+bool enabled( const tid ID ){
+  int p;
+  for( p=0; p&lt;PRE &amp;&amp; B[ID][p].index!=-1 ; ++p )
+    if( B[ID][p].weight&gt;0 &amp;&amp; M[B[ID][p].index]&lt;B[ID][p].weight ||
+        B[ID][p].weight==0 &amp;&amp; M[B[ID][p].index]&gt;0 )
+      return false;
+  return true;
+}//enabled
+
+void withdraw( const tid ID ){
+  int p;
+  for( p=0; p&lt;PRE &amp;&amp; B[ID][p].index!=-1; ++p ){
+    M[B[ID][p].index]-=B[ID][p].weight;
+  }
+}//withdraw
+
+void deposit( const tid ID ){
+  int p;
+  for( p=0; p&lt;POST &amp;&amp; F[ID][p].index!=-1; ++p ){
+   //check for M[4] out of range
+    if(M[F[ID][p].index]&lt;1)
+        M[F[ID][p].index]+=F[ID][p].weight;
+  }
+  reset();
+}//deposit
+
+bool quiet(){
+  return forall( c:cpu_t ) nxt[c]==NONE;
+}//quiet
+
+	</declaration>
+	<template>
+		<name>Starter</name>
+		<location id="id0" x="-229" y="-195">
+		</location>
+		<location id="id1" x="-331" y="-195">
+			<name x="-357" y="-229">Start</name>
+			<committed/>
+		</location>
+		<init ref="id1"/>
+		<transition>
+			<source ref="id1"/>
+			<target ref="id0"/>
+			<label kind="synchronisation" x="-314" y="-221">end_fire!</label>
+		</transition>
+	</template>
+	<template>
+		<name x="5" y="5">Transition</name>
+		<parameter>const tid ID, const task_t p</parameter>
+		<declaration>//Insert local declarations of clocks, variables and constants.</declaration>
+		<location id="id2" x="76" y="229">
+			<name x="42" y="229">F2</name>
+			<label kind="exponentialrate" x="68" y="238">1</label>
+		</location>
+		<location id="id3" x="-51" y="229">
+			<name x="-85" y="229">F1</name>
+			<label kind="invariant" x="-59" y="238">t[p]&lt;=I[ID][0]</label>
+		</location>
+		<location id="id4" x="-51" y="110">
+			<committed/>
+		</location>
+		<location id="id5" x="76" y="110">
+			<name x="92" y="102">W</name>
+			<committed/>
+		</location>
+		<location id="id6" x="-51" y="-8">
+			<name x="-42" y="0">F</name>
+			<label kind="invariant" x="-93" y="-42">t[p]&lt;=I[ID][1]</label>
+		</location>
+		<location id="id7" x="-187" y="110">
+			<name x="-212" y="85">D</name>
+		</location>
+		<init ref="id7"/>
+		<transition>
+			<source ref="id4"/>
+			<target ref="id3"/>
+			<label kind="guard" x="-51" y="136">enabled(ID)&amp;&amp;
+I[ID][1]==INF</label>
+			<label kind="synchronisation" x="-51" y="170">end_fire!</label>
+			<label kind="assignment" x="-51" y="187">t[p]=0</label>
+		</transition>
+		<transition>
+			<source ref="id2"/>
+			<target ref="id7"/>
+			<label kind="guard" x="-93" y="280">!enabled(ID)</label>
+			<label kind="synchronisation" x="-85" y="297">end_fire?</label>
+			<nail x="110" y="229"/>
+			<nail x="110" y="280"/>
+			<nail x="-221" y="280"/>
+			<nail x="-221" y="110"/>
+		</transition>
+		<transition>
+			<source ref="id3"/>
+			<target ref="id7"/>
+			<label kind="guard" x="-178" y="212">!enabled(ID)</label>
+			<label kind="synchronisation" x="-178" y="229">end_fire?</label>
+			<nail x="-119" y="229"/>
+			<nail x="-187" y="229"/>
+		</transition>
+		<transition>
+			<source ref="id2"/>
+			<target ref="id5"/>
+			<label kind="assignment" x="76" y="178">withdraw(ID)</label>
+		</transition>
+		<transition>
+			<source ref="id3"/>
+			<target ref="id2"/>
+			<label kind="guard" x="-34" y="212">t[p]&gt;=I[ID][0]</label>
+		</transition>
+		<transition>
+			<source ref="id7"/>
+			<target ref="id3"/>
+			<label kind="guard" x="-178" y="127">enabled(ID)&amp;&amp;
+I[ID][1]==INF</label>
+			<label kind="synchronisation" x="-178" y="161">end_fire?</label>
+			<label kind="assignment" x="-178" y="178">t[p]=0</label>
+		</transition>
+		<transition>
+			<source ref="id4"/>
+			<target ref="id6"/>
+			<label kind="guard" x="-51" y="17">enabled(ID)&amp;&amp;
+I[ID][1]!=INF</label>
+			<label kind="synchronisation" x="-51" y="51">end_fire!</label>
+			<label kind="assignment" x="-51" y="68">t[p]=0</label>
+		</transition>
+		<transition>
+			<source ref="id4"/>
+			<target ref="id7"/>
+			<label kind="guard" x="-153" y="93">!enabled(ID)</label>
+			<label kind="synchronisation" x="-144" y="110">end_fire!</label>
+		</transition>
+		<transition>
+			<source ref="id5"/>
+			<target ref="id4"/>
+			<label kind="synchronisation" x="-17" y="93">end_fire!</label>
+			<label kind="assignment" x="-17" y="110">deposit(ID)</label>
+		</transition>
+		<transition>
+			<source ref="id6"/>
+			<target ref="id7"/>
+			<label kind="guard" x="-178" y="-25">!enabled(ID)</label>
+			<label kind="synchronisation" x="-178" y="-8">end_fire?</label>
+			<nail x="-187" y="-8"/>
+		</transition>
+		<transition>
+			<source ref="id6"/>
+			<target ref="id5"/>
+			<label kind="guard" x="-8" y="-25">t[p]&gt;=I[ID][0]</label>
+			<label kind="assignment" x="-8" y="-8">withdraw(ID)</label>
+			<nail x="-34" y="-8"/>
+			<nail x="76" y="-8"/>
+		</transition>
+		<transition>
+			<source ref="id7"/>
+			<target ref="id6"/>
+			<label kind="guard" x="-153" y="17">enabled(ID)&amp;&amp;
+I[ID][1]!=INF</label>
+			<label kind="synchronisation" x="-153" y="51">end_fire?</label>
+			<label kind="assignment" x="-153" y="68">t[p]=0</label>
+		</transition>
+	</template>
+	<template>
+		<name x="5" y="5">pTransition</name>
+		<parameter>const tid ID, task_t p, const cpu_t cpu</parameter>
+		<declaration>//Insert local declarations of clocks, variables and constants.
+
+bool this; //this task instance
+
+void arrival(){
+   int[0,TT] j;
+   for( j=0; j&lt;TT; j++ )
+       if( request[cpu][p][j].index==ID ){
+             request[cpu][p][j].ready++; return;
+       }
+}//arrival
+
+void finish(){
+   int[0,TT] j;
+   for( j=0; j&lt;TT; j++ )
+       if( request[cpu][p][j].index==ID ){
+            request[cpu][p][j].ready--;  
+            return;
+       }
+}//finish
+ 
+ </declaration>
+		<location id="id8" x="561" y="-17">
+			<name x="551" y="-51">C2</name>
+			<committed/>
+		</location>
+		<location id="id9" x="561" y="238">
+			<name x="552" y="246">DP</name>
+			<committed/>
+		</location>
+		<location id="id10" x="705" y="68">
+			<name x="713" y="44">FC</name>
+			<urgent/>
+		</location>
+		<location id="id11" x="280" y="68">
+			<name x="248" y="60">NP</name>
+			<label kind="invariant" x="220" y="42">x[p]'==0</label>
+		</location>
+		<location id="id12" x="416" y="68">
+			<name x="433" y="51">C1</name>
+			<committed/>
+		</location>
+		<location id="id13" x="705" y="238">
+			<name x="721" y="238">W</name>
+			<committed/>
+		</location>
+		<location id="id14" x="561" y="68">
+			<name x="545" y="44">F</name>
+			<label kind="invariant" x="578" y="59">x[p]&lt;=I[ID][1]</label>
+		</location>
+		<location id="id15" x="416" y="238">
+			<name x="400" y="246">D</name>
+		</location>
+		<init ref="id15"/>
+		<transition>
+			<source ref="id8"/>
+			<target ref="id10"/>
+			<label kind="guard" x="646" y="-42">x[p]==I[ID][1]</label>
+			<label kind="assignment" x="646" y="-25">finish(), 
+busy[cpu]=NONE</label>
+			<nail x="663" y="-17"/>
+		</transition>
+		<transition>
+			<source ref="id8"/>
+			<target ref="id12"/>
+			<label kind="guard" x="459" y="-42">x[p]&lt;I[ID][1]</label>
+			<nail x="459" y="-17"/>
+		</transition>
+		<transition>
+			<source ref="id9"/>
+			<target ref="id12"/>
+			<label kind="guard" x="382" y="144">enabled(ID)</label>
+			<label kind="synchronisation" x="391" y="161">end_fire!</label>
+			<label kind="assignment" x="391" y="178">arrival(),
+x[p]=0</label>
+			<nail x="561" y="204"/>
+			<nail x="416" y="204"/>
+		</transition>
+		<transition>
+			<source ref="id9"/>
+			<target ref="id15"/>
+			<label kind="guard" x="459" y="221">!enabled(ID)</label>
+			<label kind="synchronisation" x="467" y="238">end_fire!</label>
+		</transition>
+		<transition>
+			<source ref="id11"/>
+			<target ref="id12"/>
+			<label kind="guard" x="314" y="-34">enabled(ID)</label>
+			<label kind="synchronisation" x="314" y="-17">end_fire?</label>
+			<nail x="297" y="-17"/>
+			<nail x="391" y="-17"/>
+		</transition>
+		<transition>
+			<source ref="id12"/>
+			<target ref="id15"/>
+			<label kind="guard" x="433" y="76">!enabled(ID)</label>
+			<label kind="synchronisation" x="433" y="85">end_fire?</label>
+			<label kind="assignment" x="433" y="102">finish(),
+busy[cpu]=NONE</label>
+			<nail x="467" y="110"/>
+			<nail x="467" y="204"/>
+		</transition>
+		<transition>
+			<source ref="id10"/>
+			<target ref="id15"/>
+			<label kind="guard" x="663" y="272">!enabled(ID)</label>
+			<label kind="synchronisation" x="663" y="289">end_fire?</label>
+			<nail x="748" y="68"/>
+			<nail x="748" y="289"/>
+			<nail x="416" y="289"/>
+		</transition>
+		<transition>
+			<source ref="id10"/>
+			<target ref="id13"/>
+			<label kind="guard" x="663" y="153">enabled(ID)</label>
+			<label kind="assignment" x="663" y="170">withdraw(ID)</label>
+		</transition>
+		<transition>
+			<source ref="id14"/>
+			<target ref="id8"/>
+			<label kind="guard" x="569" y="8">enabled(ID)</label>
+			<label kind="synchronisation" x="569" y="25">end_fire?</label>
+		</transition>
+		<transition>
+			<source ref="id15"/>
+			<target ref="id12"/>
+			<label kind="guard" x="306" y="102">enabled(ID)</label>
+			<label kind="synchronisation" x="314" y="119">end_fire?</label>
+			<label kind="assignment" x="314" y="136">arrival(),
+x[p]=0</label>
+			<nail x="365" y="204"/>
+			<nail x="365" y="110"/>
+		</transition>
+		<transition>
+			<source ref="id11"/>
+			<target ref="id15"/>
+			<label kind="guard" x="288" y="240">!enabled(ID)</label>
+			<label kind="synchronisation" x="288" y="256">end_fire?</label>
+			<label kind="assignment" x="288" y="272">finish()</label>
+			<nail x="280" y="127"/>
+			<nail x="280" y="238"/>
+			<nail x="374" y="238"/>
+		</transition>
+		<transition>
+			<source ref="id12"/>
+			<target ref="id14"/>
+			<label kind="guard" x="459" y="51">nxt[cpu]==ID</label>
+		</transition>
+		<transition>
+			<source ref="id12"/>
+			<target ref="id11"/>
+			<label kind="guard" x="297" y="51">nxt[cpu]!=NONE &amp;&amp;
+nxt[cpu]!=ID</label>
+			<nail x="306" y="68"/>
+		</transition>
+		<transition>
+			<source ref="id13"/>
+			<target ref="id9"/>
+			<label kind="synchronisation" x="603" y="221">end_fire!</label>
+			<label kind="assignment" x="603" y="238">deposit(ID)</label>
+		</transition>
+		<transition>
+			<source ref="id14"/>
+			<target ref="id15"/>
+			<label kind="guard" x="476" y="136">!enabled(ID)</label>
+			<label kind="synchronisation" x="476" y="153">end_fire?</label>
+			<label kind="assignment" x="476" y="170">finish(), 
+busy[cpu]=NONE</label>
+			<nail x="512" y="200"/>
+		</transition>
+		<transition>
+			<source ref="id14"/>
+			<target ref="id13"/>
+			<label kind="guard" x="569" y="144">x[p]&gt;=I[ID][0]</label>
+			<label kind="assignment" x="569" y="161">withdraw(ID),
+finish(), 
+busy[cpu]=NONE</label>
+			<nail x="616" y="200"/>
+		</transition>
+	</template>
+	<template>
+		<name>Fps</name>
+		<parameter>const cpu_t cpu</parameter>
+		<declaration>
+		
+bool requests(){
+   int i,j;
+   for( i=0; i&lt;TASK; i++ )
+      for( j=0; j&lt;TT; j++ )
+          if( request[cpu][i][j].index!=T &amp;&amp; request[cpu][i][j].ready&gt;0 ) return true;
+   return false;
+}//requests
+
+int[0,T] next(){
+   int[0,TASK] i;
+   int[0,TT] j, hpid;
+   int[-1,TASK] hpt=-1;
+
+   for( i=0; i&lt;TASK; i++ )
+      for( j=0; j&lt;TT; j++ )
+         if( request[cpu][i][j].index&lt;T &amp;&amp; request[cpu][i][j].ready&gt;0 ){
+             if( hpt==NONE || fixed_priority[cpu][i][j].prior&gt;fixed_priority[cpu][hpt][hpid].prior ){
+                 hpt=i; hpid=j;
+             }
+         }
+
+   return fixed_priority[cpu][hpt][hpid].index;
+}//next
+
+	</declaration>
+		<location id="id16" x="-2040" y="-1955">
+			<name x="-2024" y="-1963">Selection</name>
+			<committed/>
+		</location>
+		<location id="id17" x="-2193" y="-1955">
+			<name x="-2241" y="-1963">FPS</name>
+		</location>
+		<init ref="id17"/>
+		<transition>
+			<source ref="id16"/>
+			<target ref="id17"/>
+			<label kind="guard" x="-2150" y="-2040">!requests()</label>
+			<nail x="-2040" y="-2023"/>
+			<nail x="-2193" y="-2023"/>
+		</transition>
+		<transition>
+			<source ref="id16"/>
+			<target ref="id17"/>
+			<label kind="guard" x="-2142" y="-1887">requests()</label>
+			<label kind="assignment" x="-2142" y="-1870">nxt[cpu]=next()</label>
+			<nail x="-2040" y="-1887"/>
+			<nail x="-2193" y="-1887"/>
+		</transition>
+		<transition>
+			<source ref="id17"/>
+			<target ref="id16"/>
+			<label kind="guard" x="-2142" y="-1972">quiet()</label>
+			<label kind="synchronisation" x="-2150" y="-1955">end_fire?</label>
+		</transition>
+	</template>
+	<template>
+		<name>Edf</name>
+		<parameter>const cpu_t cpu</parameter>
+		<declaration>
+		
+int[0,TASK] i;
+int[0,TT] j;
+tid hpid;
+int[-1,TASK-1] hpt=-1;
+
+bool requests(){
+   int i,j;
+   for( i=0; i&lt;TASK; i++ )
+      for( j=0; j&lt;TT; j++ )
+          if( request[cpu][i][j].index!=T &amp;&amp; 
+              request[cpu][i][j].ready&gt;0 ) return true;
+   return false;
+}//requests
+	
+	</declaration>
+		<location id="id18" x="-19082" y="-18725">
+			<name x="-19146" y="-18749">Selection</name>
+			<committed/>
+		</location>
+		<location id="id19" x="-19346" y="-18725">
+			<name x="-19394" y="-18733">EDF</name>
+		</location>
+		<init ref="id19"/>
+		<transition>
+			<source ref="id18"/>
+			<target ref="id19"/>
+			<label kind="guard" x="-19252" y="-18810">!requests()</label>
+			<nail x="-19082" y="-18789"/>
+			<nail x="-19346" y="-18789"/>
+		</transition>
+		<transition>
+			<source ref="id18"/>
+			<target ref="id18"/>
+			<label kind="guard" x="-18946" y="-18789">requests() &amp;&amp; i&lt;TASK &amp;&amp; 
+request[cpu][i][j].index!=T &amp;&amp; 
+request[cpu][i][j].ready&gt;0 &amp;&amp; (hpt!=-1 &amp;&amp;
+t[i]-deadline[i]&lt;=t[hpt]-deadline[hpt])</label>
+			<label kind="assignment" x="-18946" y="-18717">i=(j==TT-1)?i+1:i,
+j=(j==TT-1)?0:j+1</label>
+			<nail x="-18954" y="-18773"/>
+			<nail x="-18954" y="-18693"/>
+		</transition>
+		<transition>
+			<source ref="id18"/>
+			<target ref="id18"/>
+			<label kind="guard" x="-19020" y="-18666">requests() &amp;&amp; i&lt;TASK &amp;&amp;
+(request[cpu][i][j].index==T ||
+request[cpu][i][j].ready==0)</label>
+			<label kind="assignment" x="-19020" y="-18606">i=(j==TT-1)?i+1:i,
+j=(j==TT-1)?0:j+1</label>
+			<nail x="-18978" y="-18677"/>
+			<nail x="-19042" y="-18613"/>
+		</transition>
+		<transition>
+			<source ref="id18"/>
+			<target ref="id18"/>
+			<label kind="guard" x="-19028" y="-18955">requests() &amp;&amp; i&lt;TASK &amp;&amp; 
+request[cpu][i][j].index!=T &amp;&amp; 
+request[cpu][i][j].ready&gt;0 &amp;&amp; 
+(hpt==-1 ||
+t[i]-deadline[i]&gt;t[hpt]-deadline[hpt])</label>
+			<label kind="assignment" x="-19028" y="-18861">hpt=i,
+hpid=request[cpu][i][j].index,
+i=(j==TT-1)?i+1:i,
+j=(j==TT-1)?0:j+1</label>
+			<nail x="-19050" y="-18845"/>
+			<nail x="-18978" y="-18797"/>
+		</transition>
+		<transition>
+			<source ref="id18"/>
+			<target ref="id19"/>
+			<label kind="guard" x="-19242" y="-18677">i==TASK</label>
+			<label kind="assignment" x="-19269" y="-18649">nxt[cpu]=hpid,
+i=0,j=0,hpt=-1</label>
+			<nail x="-19082" y="-18657"/>
+			<nail x="-19346" y="-18657"/>
+		</transition>
+		<transition>
+			<source ref="id19"/>
+			<target ref="id18"/>
+			<label kind="guard" x="-19235" y="-18759">quiet()</label>
+			<label kind="synchronisation" x="-19244" y="-18742">end_fire?</label>
+			<label kind="assignment" x="-19269" y="-18725">i=0,j=0,hpt=-1</label>
+		</transition>
+	</template>
+	<template>
+		<name>npFps</name>
+		<parameter>const cpu_t cpu</parameter>
+		<declaration>	
+bool requests(){
+   int i,j;
+   for( i=0; i&lt;TASK; i++ )
+      for( j=0; j&lt;TT; j++ )
+          if( request[cpu][i][j].index!=T &amp;&amp; request[cpu][i][j].ready&gt;0 ) return true;
+   return false;
+}//requests
+
+int[0,T] next(){
+   int[0,TASK] i;
+   int[0,TT] j, hpid;
+   int[-1,TASK] hpt=-1;
+
+   if(busy[cpu]!=NONE)
+        return busy[cpu];
+   
+   for( i=0; i&lt;TASK; i++ )
+      for( j=0; j&lt;TT; j++ )
+         if(request[cpu][i][j].index&lt;T &amp;&amp; request[cpu][i][j].ready&gt;0 ){
+             if( hpt==-1 || fixed_priority[cpu][i][j].prior&gt;fixed_priority[cpu][hpt][hpid].prior ){
+                 hpt=i; hpid=j;
+             }
+         }
+
+   return fixed_priority[cpu][hpt][hpid].index;
+}//next
+
+	</declaration>
+		<location id="id20" x="25" y="8">
+			<name x="41" y="0">Selection</name>
+			<committed/>
+		</location>
+		<location id="id21" x="-128" y="8">
+			<name x="-212" y="0">NP_FPS</name>
+		</location>
+		<init ref="id21"/>
+		<transition>
+			<source ref="id20"/>
+			<target ref="id21"/>
+			<label kind="guard" x="-85" y="-77">!requests()</label>
+			<nail x="25" y="-60"/>
+			<nail x="-128" y="-60"/>
+		</transition>
+		<transition>
+			<source ref="id20"/>
+			<target ref="id21"/>
+			<label kind="guard" x="-77" y="76">requests()</label>
+			<label kind="assignment" x="-76" y="93">nxt[cpu]=next(),
+busy[cpu]=nxt[cpu]</label>
+			<nail x="25" y="76"/>
+			<nail x="-128" y="76"/>
+		</transition>
+		<transition>
+			<source ref="id21"/>
+			<target ref="id20"/>
+			<label kind="guard" x="-77" y="-9">quiet()</label>
+			<label kind="synchronisation" x="-85" y="8">end_fire?</label>
+		</transition>
+	</template>
+	<template>
+		<name>npEdf</name>
+		<parameter>const cpu_t cpu</parameter>
+		<declaration>
+		
+int[0,TASK] i;
+int[0,TT] j;
+tid hpid;
+int[-1,TASK-1] hpt=-1;
+
+bool requests(){
+   int i,j;
+   for( i=0; i&lt;TASK; i++ )
+      for( j=0; j&lt;TT; j++ )
+          if( request[cpu][i][j].index!=T &amp;&amp; 
+              request[cpu][i][j].ready&gt;0 ) return true;
+   return false;
+}//requests
+	
+	</declaration>
+		<location id="id22" x="-59" y="110">
+			<name x="-123" y="86">Selection</name>
+			<committed/>
+		</location>
+		<location id="id23" x="-323" y="110">
+			<name x="-399" y="102">NP_EDF</name>
+		</location>
+		<init ref="id23"/>
+		<transition>
+			<source ref="id22"/>
+			<target ref="id23"/>
+			<label kind="guard" x="-255" y="289">busy[cpu]!=NONE</label>
+			<label kind="assignment" x="-255" y="306">nxt[cpu]=busy[cpu],
+i=0,j=0,hpt=-1</label>
+			<nail x="-59" y="289"/>
+			<nail x="-136" y="289"/>
+			<nail x="-323" y="289"/>
+		</transition>
+		<transition>
+			<source ref="id22"/>
+			<target ref="id23"/>
+			<label kind="guard" x="-229" y="25">!requests()</label>
+			<nail x="-119" y="42"/>
+			<nail x="-323" y="46"/>
+		</transition>
+		<transition>
+			<source ref="id22"/>
+			<target ref="id22"/>
+			<label kind="guard" x="77" y="46">busy[cpu]==NONE &amp;&amp; requests() &amp;&amp; i&lt;TASK &amp;&amp; 
+request[cpu][i][j].index!=T &amp;&amp; 
+request[cpu][i][j].ready&gt;0 &amp;&amp;
+(hpt!=-1 &amp;&amp; t[i]-deadline[i]&lt;=t[hpt]-deadline[hpt])</label>
+			<label kind="assignment" x="76" y="110">i=(j==TT-1)?i+1:i,
+j=(j==TT-1)?0:j+1</label>
+			<nail x="69" y="62"/>
+			<nail x="69" y="142"/>
+		</transition>
+		<transition>
+			<source ref="id22"/>
+			<target ref="id22"/>
+			<label kind="guard" x="17" y="178">busy[cpu]==NONE &amp;&amp; requests() &amp;&amp; i&lt;TASK &amp;&amp;
+(request[cpu][i][j].index==T || request[cpu][i][j].ready==0)</label>
+			<label kind="assignment" x="17" y="212">i=(j==TT-1)?i+1:i,
+j=(j==TT-1)?0:j+1</label>
+			<nail x="45" y="158"/>
+			<nail x="-19" y="222"/>
+		</transition>
+		<transition>
+			<source ref="id22"/>
+			<target ref="id22"/>
+			<label kind="guard" x="-8" y="-93">busy[cpu]==NONE &amp;&amp; requests() &amp;&amp; i&lt;TASK &amp;&amp; 
+request[cpu][i][j].index!=T &amp;&amp; 
+request[cpu][i][j].ready&gt;0 &amp;&amp; 
+(hpt==-1 || t[i]-deadline[i]&gt;t[hpt]-deadline[hpt])</label>
+			<label kind="assignment" x="-5" y="-26">hpt=i,
+hpid=request[cpu][i][j].index,
+i=(j==TT-1)?i+1:i,
+j=(j==TT-1)?0:j+1</label>
+			<nail x="-27" y="-10"/>
+			<nail x="45" y="38"/>
+		</transition>
+		<transition>
+			<source ref="id22"/>
+			<target ref="id23"/>
+			<label kind="guard" x="-306" y="178">busy[cpu]==NONE &amp;&amp; i==TASK</label>
+			<label kind="assignment" x="-263" y="195">nxt[cpu]=hpid,
+busy[cpu]=hpid,
+i=0,j=0,hpt=-1</label>
+			<nail x="-85" y="178"/>
+			<nail x="-289" y="178"/>
+		</transition>
+		<transition>
+			<source ref="id23"/>
+			<target ref="id22"/>
+			<label kind="guard" x="-212" y="76">quiet()</label>
+			<label kind="synchronisation" x="-221" y="93">end_fire?</label>
+			<label kind="assignment" x="-238" y="110">i=0,j=0,hpt=-1</label>
+		</transition>
+	</template>
+	<system>//Insert process assignements.
+
+//Transitions
+e_invio_richiesta_B = Transition(invio_richiesta_B, dummy_task); //Event transition
+e_invio_richiesta_A = Transition(invio_richiesta_A, dummy_task); //Event transition
+e_va_in_B = Transition(va_in_B, dummy_task); //Event transition
+e_scarica_A = Transition(scarica_A, dummy_task); //Event transition
+e_agv_va_in_B = Transition(agv_va_in_B, dummy_task); //Event transition
+e_agv_va_in_I = Transition(agv_va_in_I, dummy_task); //Event transition
+e_agv_va_in_A = Transition(agv_va_in_A, dummy_task); //Event transition
+e_carica_pezzi = Transition(carica_pezzi, dummy_task); //Event transition
+e_nessun_pezzo = Transition(nessun_pezzo, dummy_task); //Event transition
+e_rifornimento_pezzi = Transition(rifornimento_pezzi, dummy_task); //Event transition
+e_scarica_B = Transition(scarica_B, dummy_task); //Event transition
+e_va_in_I = Transition(va_in_I, dummy_task); //Event transition
+
+//Scheduler (FPS, EDF, NP_FPS or NP_EDF) declaration
+
+//System:
+system Starter,
+e_invio_richiesta_B,
+e_invio_richiesta_A,
+e_va_in_B,
+e_scarica_A,
+e_agv_va_in_B,
+e_agv_va_in_I,
+e_agv_va_in_A,
+e_carica_pezzi,
+e_nessun_pezzo,
+e_rifornimento_pezzi,
+e_scarica_B,
+e_va_in_I;
+
+	</system>
+	<queries>
+		<query>
+			<formula>A[]!deadlock</formula>
+			<comment></comment>
+		</query>
+	</queries>
+</nta>
