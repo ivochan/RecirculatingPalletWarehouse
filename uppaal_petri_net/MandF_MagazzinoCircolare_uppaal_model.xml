@@ -855,8 +855,44 @@ e_va_in_I;
 	</system>
 	<queries>
 		<query>
-			<formula>A[]!deadlock</formula>
+			<formula>E&lt;&gt; M[richiesta_pezzi_B]==1 &amp;&amp; M[agv_vuoto_B]==1</formula>
 			<comment></comment>
+		</query>
+		<query>
+			<formula>E&lt;&gt; M[agv_carico_A]==1 &amp;&amp; M[caricamento_agv]==0</formula>
+			<comment>verifica della raggiungibilita di questa marcatura da quella iniziale</comment>
+		</query>
+		<query>
+			<formula>A&lt;&gt; agv_vuoto_I</formula>
+			<comment>verifica che l'automa ragigungera' almeno uno stato in cui la proprieta' sara' vera (Inevitable p)</comment>
+		</query>
+		<query>
+			<formula>E[] attesa_A</formula>
+			<comment>la proorieta' e' potenzialmente sempre vera (Potentially Always p)</comment>
+		</query>
+		<query>
+			<formula>E&lt;&gt; attesa_B</formula>
+			<comment>e' possibile raggiungere uno stato in cui p e' verificato (p reachable)</comment>
+		</query>
+		<query>
+			<formula>A[] caricamento_agv</formula>
+			<comment>la proprieta' e' vera in tutti gli stati raggiungibili (Invariantly p)</comment>
+		</query>
+		<query>
+			<formula>agv_vuoto_A --&gt; agv_carico_A</formula>
+			<comment>(p lead to q)</comment>
+		</query>
+		<query>
+			<formula>agv_carico_A --&gt; attesa_A</formula>
+			<comment>verifica che il soddisfacimento della prima conduca alla realizzazione della seconda (p lead to q)</comment>
+		</query>
+		<query>
+			<formula>E[] richiesta_pezzi_B</formula>
+			<comment></comment>
+		</query>
+		<query>
+			<formula>A[] !deadlock</formula>
+			<comment>verifica della presenza di deadlock</comment>
 		</query>
 	</queries>
 </nta>
